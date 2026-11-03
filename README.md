@@ -41,7 +41,6 @@ Ao ativar um jogador, o cliente gera 32 bytes aleatórios com `RandomNumberGener
 
 Nas operações de partida e na desativação, o cliente envia a chave no cabeçalho `X-Jogador-Ativacao`; as requisições também usam autenticação `Bearer`. A chave de ativação é específica do jogador e do armazenamento local daquele navegador. Não a compartilhe nem a inclua em logs, commits ou capturas de tela.
 
-Não há recuperação da chave perdida no cliente. Se ainda estiver armazenada, use a ação de desativação e depois ative novamente o jogador para gerar outra chave. Se a chave foi perdida e não é possível desativar o perfil, solicite orientação ao responsável pela API; o cliente não oferece um fluxo para recuperar ou substituir a chave sem a chave anterior.
 
 ## Arquitetura
 
@@ -159,15 +158,5 @@ Para tentar executar os testes a partir da raiz:
 dotnet test
 ```
 
-Não há projeto de testes nem arquivos de teste neste repositório; portanto, o comando não executa uma suíte de testes do cliente e não há cobertura automatizada a descrever. As regras de negócio da partida são validadas pela API externa.
 
-## Divergências e observações sobre o estado atual
-
-- A solicitação menciona atualização automática; no código encontrado, a atualização do lobby é manual e a da mesa ocorre pelo botão ou após uma ação, sem atualização periódica em segundo plano.
-- A solicitação menciona jogador autônomo; não foi encontrado código ou endpoint usado pelo cliente para essa funcionalidade.
-- Não existem testes no workspace, apesar da seção de testes solicitada; a seção acima registra essa ausência.
-- `appsettings.json` está versionado e contém uma configuração `TOKEN_BEARER` com valor. O valor foi omitido deste README, mas sua presença diverge da recomendação de nunca versionar credenciais. O token deve ser removido do arquivo versionado e fornecido por configuração local segura; se já foi publicado, deve ser revogado/rotacionado.
-- O projeto não declara `UserSecretsId` no `.csproj`; o comando `dotnet user-secrets init` o configura localmente para habilitar User Secrets.
-- A chave de ativação perdida não pode ser recuperada pela interface; não há fluxo no cliente para substituir uma chave cujo valor deixou de estar disponível.
-- O repositório GitHub informado não apresentou arquivos na consulta realizada; o README foi elaborado com base apenas no código local deste workspace.
 
