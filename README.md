@@ -39,7 +39,7 @@ A aplicação cliente não implementa um jogador autônomo nem atualização per
 
 Ao ativar um jogador, o cliente gera 32 bytes aleatórios com `RandomNumberGenerator.GetBytes(32)` e os representa como 64 caracteres hexadecimais em minúsculas. A chave é enviada à API no corpo da solicitação de ativação e salva no armazenamento local do navegador (`localStorage`), usando a chave `chave_ativacao_{JogadorId}`. Ao desativar, o cliente usa a chave armazenada e a remove do navegador após a confirmação da API.
 
-Nas operações de partida e na desativação, o cliente envia a chave no cabeçalho `X-Jogador-Ativacao`; as requisições também usam autenticação `Bearer`. A chave de ativação é específica do jogador e do armazenamento local daquele navegador. Não a compartilhe nem a inclua em logs, commits ou capturas de tela.
+
 
 
 ## Arquitetura
