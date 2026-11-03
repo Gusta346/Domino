@@ -1,0 +1,134 @@
+﻿/* PainelJogadores.razor.css */
+
+.sidebar-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.card-header-game, .section-header-game {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(215, 181, 109, 0.2);
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+    .card-header-game h5, .section-header-game h5 {
+        color: #f0d99b;
+        font-size: 0.78rem;
+        letter-spacing: 0.09em;
+        font-weight: 800;
+        margin: 0;
+    }
+
+.client-card, .create-player-card {
+    background: linear-gradient(145deg, rgba(47, 31, 33, 0.92), rgba(29, 21, 23, 0.98));
+    border-radius: 0.9rem;
+    padding: 1rem;
+    border: 1px solid rgba(215, 181, 109, 0.16);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+.client-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+}
+
+.client-uuid {
+    color: #f4eee3;
+    font-size: 0.75rem;
+    background-color: #130f10;
+    padding: 4px 6px;
+    border-radius: 4px;
+    display: block;
+    margin: 4px 0;
+    font-family: monospace;
+    word-break: break-all;
+}
+
+.status-badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 8px;
+}
+
+.status-online {
+    background-color: rgba(60, 127, 88, 0.17);
+    color: #8dd0a1;
+    border: 1px solid rgba(91, 166, 115, 0.35);
+}
+
+.players-section {
+    margin-top: 10px;
+    flex: 1;
+}
+
+.sidebar-wrapper > .players-section {
+    order: 2;
+}
+
+.sidebar-wrapper > .create-player-card {
+    order: 1;
+}
+
+.sidebar-wrapper > .client-card {
+    order: 0;
+}
+
+.players-list-game {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.player-item-game {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem;
+    background: rgba(28, 21, 23, 0.86);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(215, 181, 109, 0.12);
+}
+
+.player-name-game {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+    display: block;
+}
+
+.player-id-game {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: monospace;
+}
+
+.player-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.badge-active-game {
+    color: #e5c779;
+    font-size: 0.6rem;
+    font-weight: 900;
+    border: 1px solid rgba(215, 181, 109, 0.42);
+    padding: 2px 5px;
+    border-radius: 4px;
+    background-color: rgba(215, 181, 109, 0.08);
+}
+
+.client-loading, .players-loading, .no-players {
+    text-align: center;
+    padding: 20px;
+    color: #b7a9a4;
+    font-size: 0.75rem;
+}

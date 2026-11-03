@@ -1,0 +1,268 @@
+.game-layout {
+	display: grid;
+	grid-template-columns: minmax(245px, 0.78fr) minmax(550px, 1.75fr) minmax(280px, 0.9fr);
+	grid-template-rows: 104px minmax(0, 1fr);
+	grid-template-areas:
+		"masthead masthead masthead"
+		"lobby table players";
+	width: 100%;
+	height: 100dvh;
+	min-height: 0;
+	color: #f4eee3;
+	background:
+		radial-gradient(ellipse at 50% 38%, rgba(108, 38, 51, 0.2), transparent 58%),
+		#100d0e;
+	overflow: hidden;
+	position: fixed;
+	inset: 0;
+	isolation: isolate;
+}
+
+.casino-masthead {
+	grid-area: masthead;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 2rem;
+	padding: 0.85rem clamp(1.25rem, 3vw, 3rem);
+	background: linear-gradient(100deg, #211719, #171113 56%, #25191a);
+	border-bottom: 1px solid rgba(215, 181, 109, 0.38);
+	box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
+	position: relative;
+	z-index: 1;
+}
+
+.masthead-brand {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	min-width: max-content;
+}
+
+.masthead-mark {
+	width: 3rem;
+	height: 3rem;
+	display: grid;
+	grid-template-columns: repeat(2, 0.42rem);
+	grid-template-rows: repeat(2, 0.42rem);
+	place-content: center;
+	gap: 0.38rem;
+	transform: rotate(45deg);
+	border: 1px solid rgba(240, 217, 155, 0.72);
+	border-radius: 0.65rem;
+	background: linear-gradient(145deg, rgba(215, 181, 109, 0.16), rgba(90, 29, 42, 0.42));
+	box-shadow: inset 0 0 18px rgba(215, 181, 109, 0.1), 0 0 22px rgba(215, 181, 109, 0.08);
+}
+
+.masthead-mark span {
+	width: 0.42rem;
+	height: 0.42rem;
+	border-radius: 50%;
+	background: #e7cc88;
+}
+
+.masthead-kicker {
+	margin: 0 0 0.15rem;
+	color: #c5a867;
+	font-size: 0.63rem;
+	font-weight: 750;
+	letter-spacing: 0.24em;
+}
+
+.masthead-brand h1 {
+	margin: 0;
+	color: #f3e7c9;
+	font-family: Georgia, "Times New Roman", serif;
+	font-size: clamp(1.3rem, 2vw, 1.8rem);
+	font-weight: 500;
+	letter-spacing: 0.11em;
+}
+
+.masthead-brand h1 span {
+	color: #d7b56d;
+}
+
+.masthead-caption {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-left: auto;
+}
+
+.masthead-caption p {
+	margin: 0;
+	color: #a9978f;
+	font-size: 0.66rem;
+	font-weight: 650;
+	letter-spacing: 0.18em;
+}
+
+.masthead-rule {
+	display: block;
+	width: clamp(2rem, 5vw, 5.5rem);
+	height: 1px;
+	background: linear-gradient(90deg, transparent, #b99553);
+}
+
+.masthead-seal {
+	display: grid;
+	place-content: center;
+	width: 3.8rem;
+	height: 3.8rem;
+	flex: 0 0 auto;
+	border: 1px solid rgba(215, 181, 109, 0.48);
+	border-radius: 50%;
+	color: #d7b56d;
+	font-size: 0.48rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	line-height: 1.5;
+	text-align: center;
+	transform: rotate(-12deg);
+}
+
+.layout-section {
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+	scrollbar-color: #76533a #171113;
+	scrollbar-width: thin;
+}
+
+.left-section {
+	grid-area: players;
+	display: flex;
+	flex-direction: column;
+	background: linear-gradient(180deg, rgba(33, 23, 25, 0.98), rgba(20, 15, 16, 0.98));
+	border-left: 1px solid rgba(215, 181, 109, 0.16);
+}
+
+.center-section {
+	grid-area: table;
+	display: flex;
+	min-width: 0;
+	background:
+		radial-gradient(ellipse at 50% 42%, rgba(93, 34, 45, 0.13), transparent 64%),
+		linear-gradient(135deg, #151012, #100d0e 68%);
+}
+
+.right-section {
+	grid-area: lobby;
+	display: flex;
+	flex-direction: column;
+	background: linear-gradient(180deg, rgba(33, 23, 25, 0.98), rgba(20, 15, 16, 0.98));
+	border-right: 1px solid rgba(215, 181, 109, 0.16);
+}
+
+.placeholder-content {
+	max-width: 400px;
+	padding: 2.5rem;
+	border: 1px solid rgba(215, 181, 109, 0.25);
+	border-radius: 1.25rem;
+	background: rgba(26, 18, 20, 0.76);
+	color: #b7a9a4;
+	text-align: center;
+}
+
+.placeholder-title {
+	margin-bottom: 0.75rem;
+	color: #f0d99b;
+	font-family: Georgia, "Times New Roman", serif;
+}
+
+@media (max-width: 1250px) {
+	.game-layout {
+		position: relative;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-rows: 96px minmax(590px, auto) auto;
+		grid-template-areas:
+			"masthead masthead"
+			"table table"
+			"lobby players";
+		height: auto;
+		min-height: 100dvh;
+		overflow: visible;
+	}
+
+	.layout-section {
+		overflow: visible;
+	}
+
+	.left-section {
+		border-left: 1px solid rgba(215, 181, 109, 0.16);
+		border-top: 1px solid rgba(215, 181, 109, 0.16);
+	}
+
+	.center-section {
+		min-height: 590px;
+	}
+
+	.right-section {
+		border-right: 1px solid rgba(215, 181, 109, 0.16);
+		border-top: 1px solid rgba(215, 181, 109, 0.16);
+	}
+}
+
+@media (max-width: 760px) {
+	.game-layout {
+		display: flex;
+		flex-direction: column;
+		min-height: 100dvh;
+		gap: 0;
+	}
+
+	.casino-masthead {
+		min-height: 82px;
+		gap: 0.75rem;
+		padding: 0.75rem 1rem;
+	}
+
+	.masthead-mark {
+		width: 2.4rem;
+		height: 2.4rem;
+	}
+
+	.masthead-brand {
+		gap: 0.75rem;
+	}
+
+	.masthead-kicker {
+		font-size: 0.52rem;
+		letter-spacing: 0.17em;
+	}
+
+	.masthead-brand h1 {
+		font-size: 1.16rem;
+		letter-spacing: 0.07em;
+	}
+
+	.masthead-caption,
+	.masthead-seal {
+		display: none;
+	}
+
+	.layout-section {
+		width: 100%;
+		overflow: visible;
+	}
+
+	.center-section {
+		order: 2;
+		min-height: 0;
+	}
+
+	.left-section {
+		order: 3;
+		border-left: 0;
+	}
+
+	.right-section {
+		order: 1;
+		border-right: 0;
+	}
+
+	.placeholder-content {
+		max-width: 100%;
+		padding: 1.5rem;
+	}
+}

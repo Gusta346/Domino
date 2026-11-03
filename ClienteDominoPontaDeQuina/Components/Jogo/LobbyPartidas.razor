@@ -1,0 +1,356 @@
+﻿@inject ClienteApi ApiService
+@inject IJSRuntime JSRuntime
+
+<div class="sidebar-wrapper">
+
+    <!-- Cabeçalho do Lobby -->
+    <div class="section-header-game">
+        <h5>SALAS DE JOGO</h5>
+        <button class="btn btn-sm btn-outline-warning py-0 px-2 fw-bold" @onclick="AtualizarLobby" disabled="@carregando" style="font-size: 0.7rem;">
+            Atualizar salas
+        </button>
+    </div>
+
+    <!-- Seção de Criação de Partida -->
+    <div class="create-player-card">
+        <h6 class="text-warning mb-3 font-weight-bold" style="font-size: 0.75rem; letter-spacing: 0.5px;">NOVA MESA</h6>
+
+        <div class="mb-2">
+            <span class="input-label-game">Meta de pontos</span>
+            <input type="number" class="form-control form-control-sm bg-dark text-light border-secondary"
+                   @bind="pontuacaoAlvo" min="50" max="500" disabled="@carregando" placeholder="Ex.: 100" />
+        </div>
+
+        <div class="mb-3">
+            <span class="input-label-game">Anfitrião</span>
+            @if (jogadores == null || !jogadores.Any(j => j.Ativo))
+            {
+                <div class="alert alert-warning p-2 mb-0" style="font-size: 0.65rem;">
+                    Nenhum jogador ativo disponível. Ative um perfil no painel de jogadores.
+                </div>
+            }
+            else
+            {
+                <!-- Seleção de Criador de Sala -->
+                <select class="form-select form-select-sm bg-dark text-light border-secondary" @bind="jogadorCriadorIdStr" disabled="@carregando" style="font-size: 0.7rem;">
+                    <option value="">Escolha quem será o anfitrião</option>
+                    @foreach (var j in jogadores.Where(j => j.Ativo))
+                    {
+                        <option value="@j.JogadorId">@j.Nome</option>
+                    }
+                </select>
+            }
+        </div>
+
+        <button class="btn btn-sm btn-warning w-100 fw-bold text-dark" @onclick="CriarPartida" disabled="@carregando" style="font-size: 0.75rem;">
+            Criar mesa
+        </button>
+    </div>
+
+    <!-- Listagem de Partidas Disponíveis no Servidor -->
+    <div class="players-section">
+        <div class="section-header-game mb-2">
+            <h5 style="font-size: 0.75rem;">MESAS DISPONÍVEIS</h5>
+            <span class="player-count text-muted" style="font-size: 0.75rem;">(@partidas.Count)</span>
+        </div>
+
+        @if (carregando && partidas.Count == 0)
+        {
+            <div class="players-loading text-center p-3">
+                <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+            </div>
+        }
+        else if (partidas.Count == 0)
+        {
+            <div class="no-players">
+                <p class="text-muted small">Nenhuma mesa aberta por enquanto. Que tal iniciar uma?</p>
+            </div>
+        }
+        else
+        {
+            <div class="players-list-game">
+                @foreach (var p in partidas)
+                {
+                    <div class="player-item-game match-card" style="height: auto; padding-bottom: 8px;">
+                        <div class="w-100 d-flex justify-content-between align-items-center">
+                            <span class="player-name-game">Até @p.PontuacaoAlvo pontos</span>
+                            <span class="badge-active-game">v@(p.VersaoEstado)</span>
+                        </div>
+
+                        <span class="player-id-game user-select-all mt-1" title="@p.PartidaId" style="font-size: 0.6rem; word-break: break-all; display: block; color: #adb5bd;">ID: @p.PartidaId</span>
+
+                        <div class="w-100 border-top border-secondary pt-2">
+                            <div class="mb-2">
+                                <span class="input-label-game" style="font-size: 0.6rem;">Entrar com jogador ativo</span>
+                                <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                                        value="@GetJogadorIngresso(p.PartidaId)"
+                                        @onchange="@(e => SetJogadorIngresso(p.PartidaId, e.Value?.ToString()))" style="font-size: 0.65rem;">
+                                    <option value="">Escolha seu jogador</option>
+                                    @foreach (var j in jogadores.Where(x => x.Ativo))
+                                    {
+                                <option value="@j.JogadorId">@j.Nome</option>
+                                    }
+                                </select>
+                            </div>
+                            <button class="btn btn-sm btn-warning w-100 py-1 fw-bold text-dark" @onclick="() => IngressarPartida(p.PartidaId, p.VersaoEstado)" style="font-size: 0.7rem;">
+                                Entrar na mesa
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(mensagemStatus))
+    {
+        <div class="alert @classeAlerta p-2 mt-2 mb-0" role="alert" style="font-size: 0.75rem;">
+            @mensagemStatus
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Evento disparado quando o jogador ingressa em uma partida, repassando o estado atualizado da participação.
+    /// </summary>
+    [Parameter] public EventCallback<EstadoPartidaParticipante> OnPartidaIngressada { get; set; }
+
+    /// <summary>
+    /// Evento personalizado disparado ao ingressar na partida, contendo o identificador único da partida e o estado da participação.
+    /// </summary>
+    [Parameter] public EventCallback<(Guid PartidaId, EstadoPartidaParticipante Estado)> OnPartidaIngressadaCustom { get; set; }
+
+    /// <summary>
+    /// Token de autenticação Bearer utilizado nas requisições HTTP do componente.
+    /// </summary>
+    [Parameter] public string? tokenBearer { get; set; }
+
+    /// <summary>
+    /// Lista de perfis de jogadores disponíveis para seleção e interação no lobby.
+    /// </summary>
+    [Parameter] public List<PerfilJogador> jogadores { get; set; } = new();
+
+    /// <summary>
+    /// Evento disparado quando é necessária a atualização geral dos dados do componente pai.
+    /// </summary>
+    [Parameter] public EventCallback OnAtualizarRequerido { get; set; }
+
+    private List<PartidaDisponivel> partidas = new();
+    private int pontuacaoAlvo = 50;
+    private string jogadorCriadorIdStr = string.Empty;
+    private Dictionary<Guid, string> jogadoresIngressoPorPartida = new();
+
+    private bool carregando = false;
+    private string? mensagemStatus;
+    private string classeAlerta = "alert-dark";
+
+    /// <summary>
+    /// Obtém o identificador do jogador associado ao ingresso de uma partida específica de forma segura no dicionário local.
+    /// </summary>
+    /// <param name="partidaId">Identificador único (UUID) da partida consultada.</param>
+    /// <returns>O identificador do jogador em formato de string, ou uma string vazia se não estiver mapeado.</returns>
+    private string GetJogadorIngresso(Guid partidaId)
+    {
+        return jogadoresIngressoPorPartida.TryGetValue(partidaId, out var val) ? val : string.Empty;
+    }
+
+    /// <summary>
+    /// Define ou atualiza o identificador do jogador associado ao ingresso de uma partida específica no dicionário local.
+    /// </summary>
+    /// <param name="partidaId">Identificador único (UUID) da partida alvo.</param>
+    /// <param name="valor">O valor do identificador do jogador a ser armazenado.</param>
+    private void SetJogadorIngresso(Guid partidaId, string? valor)
+    {
+        jogadoresIngressoPorPartida[partidaId] = valor ?? string.Empty;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(tokenBearer) && partidas.Count == 0)
+        {
+            await CarregarPartidas();
+        }
+    }
+
+    /// <summary>
+    /// Atualiza de forma assíncrona o lobby da aplicação, disparando o evento de notificação e recarregando a listagem de partidas.
+    /// </summary>
+    private async Task AtualizarLobby()
+    {
+        await OnAtualizarRequerido.InvokeAsync();
+        await CarregarPartidas();
+    }
+
+    /// <summary>
+    /// Carrega de forma assíncrona a lista de partidas disponíveis utilizando o token Bearer configurado,
+    /// gerenciando o indicador de carregamento e o tratamento de eventuais erros de comunicação.
+    /// </summary>
+    /// <exception cref="Exception">Capturada internamente e convertida em uma mensagem de alerta visual para o usuário em caso de falha na listagem.</exception>
+    private async Task CarregarPartidas()
+    {
+        if (string.IsNullOrEmpty(tokenBearer)) return;
+
+        carregando = true;
+        StateHasChanged();
+
+        try
+        {
+            partidas = await ApiService.ListarPartidasDisponiveisAsync(tokenBearer) ?? new();
+        }
+        catch (Exception ex)
+        {
+            mensagemStatus = $"Erro ao listar partidas: {ex.Message}";
+            classeAlerta = "alert-danger";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Cria de forma assíncrona uma nova partida por meio da API, validando o jogador criador,
+    /// recuperando a chave de ativação correspondente do armazenamento local e atualizando o status do lobby.
+    /// </summary>
+    /// <exception cref="Exception">Capturada internamente e convertida em uma mensagem de alerta visual para o usuário em caso de falha na criação.</exception>
+    private async Task CriarPartida()
+    {
+        if (string.IsNullOrEmpty(tokenBearer)) return;
+        if (!Guid.TryParse(jogadorCriadorIdStr, out var jogadorId))
+        {
+            mensagemStatus = "Selecione um jogador criador válido.";
+            classeAlerta = "alert-warning";
+            return;
+        }
+
+        if (jogadores?.Any(j => j.JogadorId == jogadorId && j.Ativo) != true)
+        {
+            mensagemStatus = "O anfitrião precisa estar ativo. Atualize os jogadores e selecione um perfil ativo.";
+            classeAlerta = "alert-warning";
+            return;
+        }
+
+        var chaveAtivacao = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"chave_ativacao_{jogadorId}");
+        if (string.IsNullOrEmpty(chaveAtivacao))
+        {
+            mensagemStatus = "Erro: Este jogador não possui chave ativa gravada neste navegador. Desative e ative-o novamente.";
+            classeAlerta = "alert-danger";
+            return;
+        }
+
+        carregando = true;
+        mensagemStatus = "Criando partida...";
+        classeAlerta = "alert-info";
+        StateHasChanged();
+
+        try
+        {
+            var resultado = await ApiService.CriarPartidaAsync(tokenBearer, chaveAtivacao, pontuacaoAlvo, jogadorId);
+            if (resultado != null)
+            {
+                mensagemStatus = "Partida criada com sucesso!";
+                classeAlerta = "alert-success";
+                await CarregarPartidas();
+            }
+            else
+            {
+                mensagemStatus = "Erro ao criar partida na API.";
+                classeAlerta = "alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensagemStatus = $"Erro: {ex.Message}";
+            classeAlerta = "alert-danger";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Permite que um jogador ingresse de forma assíncrona em uma partida existente, validando o identificador do jogador,
+    /// recuperando a chave de ativação do armazenamento local, atualizando a versão do estado e notificando o componente pai.
+    /// </summary>
+    /// <param name="partidaId">Identificador único (UUID) da partida na qual o jogador deseja ingressar.</param>
+    /// <param name="versaoEstado">Versão atual esperada do estado da partida para controle de concorrência otimista.</param>
+    /// <exception cref="Exception">Capturada internamente e convertida em uma mensagem de alerta visual em caso de falha no processo de ingresso.</exception>
+    private async Task IngressarPartida(Guid partidaId, long versaoEstado)
+    {
+        if (string.IsNullOrWhiteSpace(tokenBearer))
+            return;
+
+        var jogadorIngressoIdStr = GetJogadorIngresso(partidaId);
+
+        if (!Guid.TryParse(jogadorIngressoIdStr, out var jogadorId))
+        {
+            mensagemStatus = "Selecione um jogador convidado válido no dropdown.";
+            classeAlerta = "alert-warning";
+            return;
+        }
+
+        var chaveAtivacao = await JSRuntime.InvokeAsync<string>(
+            "localStorage.getItem",
+            $"chave_ativacao_{jogadorId}");
+
+        if (string.IsNullOrWhiteSpace(chaveAtivacao))
+        {
+            mensagemStatus = "O jogador selecionado não possui uma chave de ativação neste navegador.";
+            classeAlerta = "alert-danger";
+            return;
+        }
+
+        carregando = true;
+        mensagemStatus = "Ingressando na partida...";
+        classeAlerta = "alert-info";
+        StateHasChanged();
+
+        try
+        {
+            partidas = await ApiService.ListarPartidasDisponiveisAsync(tokenBearer);
+            var partidaAtual = partidas.FirstOrDefault(p => p.PartidaId == partidaId);
+            if (partidaAtual != null)
+            {
+                versaoEstado = partidaAtual.VersaoEstado;
+            }
+
+            var chaveIdempotencia = Guid.NewGuid();
+
+            var resultadoIngresso = await ApiService.IngressarPartidaAsync(
+                tokenBearer,
+                chaveAtivacao,
+                partidaId,
+                versaoEstado,
+                chaveIdempotencia,
+                jogadorId);
+
+            if (resultadoIngresso is null)
+            {
+                mensagemStatus = "A API não retornou o estado da partida.";
+                classeAlerta = "alert-danger";
+                return;
+            }
+
+            mensagemStatus = "Ingresso realizado com sucesso! Inicie a partida.";
+            classeAlerta = "alert-success";
+
+            await OnPartidaIngressadaCustom.InvokeAsync((partidaId, resultadoIngresso));
+            await CarregarPartidas();
+        }
+        catch (Exception ex)
+        {
+            mensagemStatus = $"Falha no ingresso: {ex.Message}";
+            classeAlerta = "alert-danger";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+}

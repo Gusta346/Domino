@@ -1,0 +1,89 @@
+﻿@page "/"
+@inject ClienteApi ApiService
+
+<PageTitle>Clube Ponta de Quina</PageTitle>
+
+<div class="game-layout">
+    <header class="casino-masthead">
+        <div class="masthead-brand">
+            <span class="masthead-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            <div>
+                <p class="masthead-kicker">CASA DE JOGO · DOMINÓ</p>
+                <h1>PONTA <span>DE QUINA</span></h1>
+            </div>
+        </div>
+        <div class="masthead-caption">
+            <span class="masthead-rule"></span>
+            <p>ESTRATÉGIA, INTUIÇÃO E BOAS JOGADAS</p>
+        </div>
+        <span class="masthead-seal">CLUBE<br />DE DOMINÓ</span>
+    </header>
+
+    <!-- Lobby de Partidas -->
+    <div class="layout-section right-section">
+        <LobbyPartidas tokenBearer="@tokenBearer"
+                        jogadores="@jogadores"
+                        OnAtualizarRequerido="CarregarDadosGlobaisAsync"
+                        OnPartidaIngressadaCustom="(args) => HandlePartidaIngressadaCustom(args.PartidaId, args.Estado)" />
+    </div>
+
+    <!-- Mesa de Jogo -->
+    <div class="layout-section center-section">
+        <MesaDomino tokenBearer="@tokenBearer"
+                   jogadores="@jogadores"
+                   partidaId="@partidaAtualId"
+                   @bind-estadoPartida="estadoPartidaAtiva" />
+    </div>
+
+    <!-- Gestão de Jogadores e Sessão -->
+    <div class="layout-section left-section">
+        <PainelJogadores />
+    </div>
+</div>
+
+@code {
+    private string? tokenBearer;
+    private List<PerfilJogador> jogadores = new();
+    private EstadoPartidaParticipante? estadoPartidaAtiva;
+    private Guid? partidaAtualId;
+
+    /// <summary>
+    /// Inicializa o componente carregando as configurações e dados globais da sessão.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        tokenBearer = ApiService.ObterTokenConfigurado();
+        await CarregarDadosGlobaisAsync();
+    }
+
+    /// <summary>
+    /// Carrega de forma assíncroma os dados globais da aplicação, incluindo a listagem de jogadores cadastrados.
+    /// </summary>
+    public async Task CarregarDadosGlobaisAsync()
+    {
+        tokenBearer = ApiService.ObterTokenConfigurado();
+        if (string.IsNullOrEmpty(tokenBearer)) return;
+
+        try
+        {
+            jogadores = await ApiService.ListarJogadoresAsync(tokenBearer) ?? new();
+            StateHasChanged();
+        }
+        catch
+        {
+            jogadores = new();
+        }
+    }
+
+    /// <summary>
+    /// Captura o ID da partida e o estado no momento do ingresso, repassando para a mesa central.
+    /// </summary>
+    /// <param name="idPartida">Identificador único (UUID) da partida selecionada.</param>
+    /// <param name="novoEstado">Estado atualizado da participação do jogador na partida.</param>
+    private void HandlePartidaIngressadaCustom(Guid idPartida, EstadoPartidaParticipante novoEstado)
+    {
+        partidaAtualId = idPartida;
+        estadoPartidaAtiva = novoEstado;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,299 @@
+﻿@inject ClienteApi ApiService
+@inject IJSRuntime JSRuntime
+<div class="sidebar-wrapper">
+
+    <!-- Painel de Controle -->
+    <div class="client-card">
+        <div class="card-header-game">
+            <h5>SESSÃO</h5>
+        </div>
+
+        <button class="btn btn-sm btn-warning w-100 fw-bold text-dark" @onclick="CarregarDadosIniciais" disabled="@carregando">
+            @if (carregando)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span> Sincronizando...</span>
+            }
+            else
+            {
+                <span class="bi bi-arrow-clockwise"></span> <text>Sincronizar sessão</text>
+            }
+        </button>
+
+        @if (sessao != null)
+        {
+            <div class="client-info mt-2 pt-2 border-top border-secondary">
+                <span class="client-label">ID DA SESSÃO</span>
+                <code class="client-uuid">@sessao.UsuarioId</code>
+                <span class="status-badge status-online">Conectado</span>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(mensagemStatus))
+        {
+            <div class="alert @classeAlerta p-2 mt-2 mb-0" role="alert" style="font-size: 0.75rem;">
+                @mensagemStatus
+            </div>
+        }
+    </div>
+
+    <!-- Criar Novo Jogador -->
+    <div class="create-player-card">
+        <h6 class="text-warning mb-2 font-weight-bold" style="font-size: 0.75rem;">CADASTRAR JOGADOR</h6>
+        <div class="mb-2">
+            <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
+                   @bind="novoNomeJogador" placeholder="Digite o nome do jogador" disabled="@carregando" />
+        </div>
+        <button class="btn btn-sm btn-warning w-100 fw-bold" @onclick="CriarJogadorAsync" disabled="@carregando">
+            Adicionar jogador
+        </button>
+    </div>
+
+    <!-- Lista de Jogadores -->
+    <div class="players-section">
+        <div class="section-header-game">
+            <h5>SEUS JOGADORES</h5>
+            <span class="player-count">(@jogadores.Count)</span>
+        </div>
+
+        @if (jogadores.Count == 0)
+        {
+            <div class="no-players">
+                <p class="text-secondary small">Sua lista está vazia. Sincronize a sessão para carregar os jogadores.</p>
+            </div>
+        }
+        else
+        {
+            <div class="players-list-game">
+                @foreach (var j in jogadores)
+                {
+                    <div class="player-item-game" style="height: auto; padding-bottom: 8px;">
+                        <div class="player-info-game" style="overflow: hidden; width: 100%;">
+                            <div class="d-flex justify-content-between align-items-center w-100">
+                                <span class="player-name-game">@j.Nome</span>
+                                <div class="player-actions">
+                                    @if (j.Ativo)
+                                    {
+                                        <span class="badge-active-game">ATIVO</span>
+                                        <button class="btn btn-sm btn-outline-warning py-0 px-2" @onclick="() => DesativarJogadorAsync(j.JogadorId)" disabled="@carregando" style="font-size: 0.7rem;">
+                                            Desativar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-warning py-0 px-2 text-dark fw-bold" @onclick="() => AtivarJogadorAsync(j.JogadorId)" disabled="@carregando" style="font-size: 0.7rem;">
+                                            Ativar
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- ID COMPLETO EXIBIDO AQUI -->
+                            <span class="player-id-game user-select-all mt-1" title="@j.JogadorId" style="font-size: 0.6rem; word-break: break-all; display: block; color: #adb5bd;">ID: @j.JogadorId</span>
+
+                            <!-- CHAVE DE ATIVAÇÃO CASO ESTEJA ATIVO E DISPONÍVEL -->
+                            @if (j.Ativo && chavesAtivas.ContainsKey(j.JogadorId))
+                            {
+                                <span class="user-select-all mt-1" style="font-size: 0.58rem; word-break: break-all; display: block; color: #ffc107;">Chave: @chavesAtivas[j.JogadorId]</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string? tokenBearer;
+    private SessaoResponse? sessao;
+    private List<PerfilJogador> jogadores = new();
+    private Dictionary<Guid, string> chavesAtivas = new();
+    private string novoNomeJogador = string.Empty;
+    private bool carregando = false;
+    private string? mensagemStatus;
+    private string classeAlerta = "alert-dark";
+
+    /// <summary>
+    /// Método de ciclo de vida executado durante a inicialização do componente, 
+    /// responsável por carregar o token Bearer padrão configurado na aplicação.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        tokenBearer = ApiService.ObterTokenConfigurado();
+    }
+
+    /// <summary>
+    /// Carrega de forma assíncrona os dados iniciais do componente, incluindo a consulta da sessão ativa na API,
+    /// a listagem de jogadores cadastrados e a recuperação das chaves de ativação armazenadas no navegador.
+    /// </summary>
+    /// <exception cref="Exception">Capturada internamente e convertida em uma mensagem de alerta visual para o usuário em caso de falhas na comunicação.</exception>
+    private async Task CarregarDadosIniciais()
+    {
+        carregando = true;
+        mensagemStatus = "Consultando sessão e jogadores...";
+        classeAlerta = "alert-info";
+        StateHasChanged();
+
+        try
+        {
+            if (string.IsNullOrEmpty(tokenBearer) || tokenBearer == "TOKEN_BEARER")
+            {
+                mensagemStatus = "Erro: Token Bearer não configurado.";
+                classeAlerta = "alert-danger";
+                return;
+            }
+
+            sessao = await ApiService.ConsultarSessaoAsync(tokenBearer);
+            if (sessao == null)
+            {
+                mensagemStatus = "Falha: Token inválido ou expirado.";
+                classeAlerta = "alert-danger";
+                return;
+            }
+
+            jogadores = await ApiService.ListarJogadoresAsync(tokenBearer) ?? new();
+
+            chavesAtivas.Clear();
+            foreach (var j in jogadores.Where(x => x.Ativo))
+            {
+                var chave = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"chave_ativacao_{j.JogadorId}");
+                if (!string.IsNullOrEmpty(chave))
+                {
+                    chavesAtivas[j.JogadorId] = chave;
+                }
+            }
+
+            mensagemStatus = $"{jogadores.Count} jogador(es) carregado(s).";
+            classeAlerta = "alert-success";
+        }
+        catch (Exception ex)
+        {
+            mensagemStatus = $"Erro: {ex.Message}";
+            classeAlerta = "alert-danger";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CriarJogadorAsync()
+    {
+        if (string.IsNullOrWhiteSpace(tokenBearer) || sessao == null)
+        {
+            mensagemStatus = "Carregue a sessão primeiro.";
+            classeAlerta = "alert-warning";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(novoNomeJogador)) return;
+
+        carregando = true;
+        try
+        {
+            var criado = await ApiService.CriarJogadorAsync(tokenBearer, novoNomeJogador.Trim());
+            if (criado != null)
+            {
+                novoNomeJogador = string.Empty;
+                jogadores = await ApiService.ListarJogadoresAsync(tokenBearer) ?? new();
+                mensagemStatus = "Jogador criado com sucesso!";
+                classeAlerta = "alert-success";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensagemStatus = $"Erro: {ex.Message}";
+            classeAlerta = "alert-danger";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Cria de forma assíncrona um novo jogador na sessão utilizando o token Bearer e o nome informado,
+    /// atualizando a listagem local de jogadores e exibindo a mensagem de sucesso correspondente.
+    /// </summary>
+    /// <exception cref="Exception">Capturada internamente e convertida em uma mensagem de alerta visual para o usuário em caso de falhas na requisição.</exception>
+    private async Task AtivarJogadorAsync(Guid jogadorId)
+    {
+        if (string.IsNullOrWhiteSpace(tokenBearer)) return;
+
+        carregando = true;
+        try
+        {
+            var bytesChave = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+            var chaveHex = Convert.ToHexString(bytesChave).ToLowerInvariant();
+
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", $"chave_ativacao_{jogadorId}", chaveHex);
+            var resultado = await ApiService.AtivarClienteAsync(tokenBearer, jogadorId, chaveHex);
+
+            if (resultado != null && resultado.Ativo)
+            {
+                jogadores = await ApiService.ListarJogadoresAsync(tokenBearer) ?? new();
+                chavesAtivas[jogadorId] = chaveHex;
+                mensagemStatus = "Cliente ativado!";
+                classeAlerta = "alert-success";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensagemStatus = $"Erro: {ex.Message}";
+            classeAlerta = "alert-danger";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Desativa de forma assíncrona um jogador na API, recuperando sua chave de ativação local,    
+    /// executando a desativação, removendo os dados correspondentes do armazenamento local e atualizando a interface.
+    /// </summary>
+    /// <param name="jogadorId">Identificador único (UUID) do jogador que será desativado.</param>
+    /// <exception cref="Exception">Capturada internamente e convertida em uma mensagem de alerta visual para o usuário em caso de falha na requisição.</exception>
+    private async Task DesativarJogadorAsync(Guid jogadorId)
+    {
+        if (string.IsNullOrWhiteSpace(tokenBearer)) return;
+
+        carregando = true;
+        try
+        {
+            var chaveHex = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"chave_ativacao_{jogadorId}");
+            if (string.IsNullOrEmpty(chaveHex))
+            {
+                mensagemStatus = "Chave local não encontrada.";
+                classeAlerta = "alert-warning";
+                carregando = false;
+                return;
+            }
+
+            var resultado = await ApiService.DesativarClienteAsync(tokenBearer, jogadorId, chaveHex);
+
+            if (resultado != null && !resultado.Ativo)
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", $"chave_ativacao_{jogadorId}");
+                chavesAtivas.Remove(jogadorId);
+                jogadores = await ApiService.ListarJogadoresAsync(tokenBearer) ?? new();
+                mensagemStatus = "Cliente desativado!";
+                classeAlerta = "alert-success";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensagemStatus = $"Erro: {ex.Message}";
+            classeAlerta = "alert-danger";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+}
